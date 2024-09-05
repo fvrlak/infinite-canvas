@@ -6,12 +6,38 @@ interface NodeProps {
   id: string;
   x: number;
   y: number;
+  width: number;
+  height: number;
   content: string;
   selected: boolean;
 }
 
-const Node: React.FC<NodeProps & { zoom: number; onSelect: (id: string | null) => void }> = 
-  ({ id, x, y, content, zoom, selected, onSelect }) => {
+const ResizeHandle: React.FC<{ position: string; onMouseDown: (e: React.MouseEvent) => void }> = ({ position, onMouseDown }) => {
+  const style: React.CSSProperties = {
+    position: 'absolute',
+    width: '10px',
+    height: '10px',
+    background: 'blue',
+    borderRadius: '50%',
+    ...(() => {
+      switch (position) {
+        case 'nw': return { top: '-5px', left: '-5px', cursor: 'nwse-resize' };
+        case 'ne': return { top: '-5px', right: '-5px', cursor: 'nesw-resize' };
+        case 'sw': return { bottom: '-5px', left: '-5px', cursor: 'nesw-resize' };
+        case 'se': return { bottom: '-5px', right: '-5px', cursor: 'nwse-resize' };
+        default: return {};
+      }
+    })()
+  };
+
+  return <div style={style} onMouseDown={onMouseDown} />;
+};
+
+const Node: React.FC<NodeProps & { 
+  zoom: number; 
+  onSelect: (id: string | null) => void;
+  onResize: (id: string, width: number, height: number) => void;
+}> = ({ id, x, y, width, height, content, zoom, selected, onSelect, onResize }) => {
   const style = useMemo(() => ({
     transform: `translate3d(${x}px, ${y}px, 0) scale(${zoom})`,
     transformOrigin: 'top left',
@@ -19,16 +45,47 @@ const Node: React.FC<NodeProps & { zoom: number; onSelect: (id: string | null) =
     pointerEvents: 'auto' as const,
     padding: '8px',
     fontSize: '14px',
-    minWidth: '100px',
-    minHeight: '50px',
+    width: `${width}px`,
+    height: `${height}px`,
     border: selected ? '2px solid blue' : '1px solid gray',
     backgroundColor: selected ? 'lightblue' : 'white',
-  }), [x, y, zoom, selected]);
+  }), [x, y, zoom, selected, width, height]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    onSelect(selected ? null : id);  // Toggle selection
+    onSelect(selected ? null : id);
   };
+
+  const handleResize = useCallback((e: React.MouseEvent, direction: string) => {
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startWidth = width;
+    const startHeight = height;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const dx = (moveEvent.clientX - startX) / zoom;
+      const dy = (moveEvent.clientY - startY) / zoom;
+
+      let newWidth = startWidth;
+      let newHeight = startHeight;
+
+      if (direction.includes('e')) newWidth = Math.max(50, startWidth + dx);
+      if (direction.includes('s')) newHeight = Math.max(50, startHeight + dy);
+      if (direction.includes('w')) newWidth = Math.max(50, startWidth - dx);
+      if (direction.includes('n')) newHeight = Math.max(50, startHeight - dy);
+
+      onResize(id, newWidth, newHeight);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [id, width, height, zoom, onResize]);
 
   return (
     <div
@@ -37,6 +94,14 @@ const Node: React.FC<NodeProps & { zoom: number; onSelect: (id: string | null) =
       onClick={handleClick}
     >
       {content}
+      {selected && (
+        <>
+          <ResizeHandle position="nw" onMouseDown={(e) => handleResize(e, 'nw')} />
+          <ResizeHandle position="ne" onMouseDown={(e) => handleResize(e, 'ne')} />
+          <ResizeHandle position="sw" onMouseDown={(e) => handleResize(e, 'sw')} />
+          <ResizeHandle position="se" onMouseDown={(e) => handleResize(e, 'se')} />
+        </>
+      )}
     </div>
   );
 };
@@ -60,6 +125,8 @@ const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom, onNodeSele
       id: `node-${Date.now()}`,
       x: x,
       y: y,
+      width: 150,
+      height: 100,
       content: 'New Node',
       selected: false,
     };
@@ -81,6 +148,12 @@ const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom, onNodeSele
     })));
     onNodeSelect(null);
   }, [onNodeSelect]);
+
+  const resizeNode = useCallback((id: string, width: number, height: number) => {
+    setNodes(prevNodes => prevNodes.map(node => 
+      node.id === id ? { ...node, width, height } : node
+    ));
+  }, []);
 
   useImperativeHandle(ref, () => ({
     addNode,
@@ -106,6 +179,7 @@ const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom, onNodeSele
           y={node.y * zoom}
           zoom={zoom}
           onSelect={selectNode}
+          onResize={resizeNode}
         />
       ))}
     </div>
