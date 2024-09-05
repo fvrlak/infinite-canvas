@@ -35,11 +35,13 @@ const ResizeHandle: React.FC<{ position: string; onMouseDown: (e: React.MouseEve
 
 const Node: React.FC<NodeProps & { 
   zoom: number; 
+  canvasOffset: { x: number; y: number };
   onSelect: (id: string | null) => void;
   onResize: (id: string, width: number, height: number) => void;
-}> = ({ id, x, y, width, height, content, zoom, selected, onSelect, onResize }) => {
+  onMove: (id: string, x: number, y: number) => void;
+}> = ({ id, x, y, width, height, content, zoom, canvasOffset, selected, onSelect, onResize, onMove }) => {
   const style = useMemo(() => ({
-    transform: `translate3d(${x}px, ${y}px, 0) scale(${zoom})`,
+    transform: `translate3d(${(x + canvasOffset.x) * zoom}px, ${(y + canvasOffset.y) * zoom}px, 0) scale(${zoom})`,
     transformOrigin: 'top left',
     willChange: 'transform',
     pointerEvents: 'auto' as const,
@@ -49,12 +51,37 @@ const Node: React.FC<NodeProps & {
     height: `${height}px`,
     border: selected ? '2px solid blue' : '1px solid gray',
     backgroundColor: selected ? 'lightblue' : 'white',
-  }), [x, y, zoom, selected, width, height]);
+    cursor: 'move',
+  }), [x, y, zoom, canvasOffset, selected, width, height]);
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     onSelect(selected ? null : id);
   };
+
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (e.target !== e.currentTarget) return; // Ignore if clicking on resize handle
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startNodeX = x;
+    const startNodeY = y;
+
+    const onMouseMove = (moveEvent: MouseEvent) => {
+      const dx = (moveEvent.clientX - startX) / zoom;
+      const dy = (moveEvent.clientY - startY) / zoom;
+      onMove(id, startNodeX + dx, startNodeY + dy);
+    };
+
+    const onMouseUp = () => {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  }, [id, x, y, zoom, onMove]);
 
   const handleResize = useCallback((e: React.MouseEvent, direction: string) => {
     e.stopPropagation();
@@ -92,6 +119,7 @@ const Node: React.FC<NodeProps & {
       className="absolute rounded shadow-md"
       style={style}
       onClick={handleClick}
+      onMouseDown={handleMouseDown}
     >
       {content}
       {selected && (
@@ -155,31 +183,28 @@ const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom, onNodeSele
     ));
   }, []);
 
+  const moveNode = useCallback((id: string, x: number, y: number) => {
+    setNodes(prevNodes => prevNodes.map(node =>
+      node.id === id ? { ...node, x, y } : node
+    ));
+  }, []);
+
   useImperativeHandle(ref, () => ({
     addNode,
     deselectAll
   }), [addNode, deselectAll]);
 
-  const containerStyle = useMemo(() => ({
-    transform: `translate3d(${canvasOffset.x * zoom}px, ${canvasOffset.y * zoom}px, 0)`,
-    transformOrigin: 'top left',
-    willChange: 'transform',
-  }), [canvasOffset.x, canvasOffset.y, zoom]);
-
   return (
-    <div 
-      className="absolute inset-0 pointer-events-none z-20"
-      style={containerStyle}
-    >
+    <div className="absolute inset-0 pointer-events-none z-20">
       {nodes.map((node) => (
         <Node
           key={node.id}
           {...node}
-          x={node.x * zoom}
-          y={node.y * zoom}
           zoom={zoom}
+          canvasOffset={canvasOffset}
           onSelect={selectNode}
           onResize={resizeNode}
+          onMove={moveNode}
         />
       ))}
     </div>

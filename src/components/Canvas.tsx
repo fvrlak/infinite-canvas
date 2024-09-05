@@ -3,25 +3,34 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Nodes, { NodesRef } from './Nodes';
 
-const PenButton: React.FC<{ onSelect: () => void }> = ({ onSelect }) => {
+const PenButton: React.FC<{ onSelect: () => void; selected: boolean }> = ({ onSelect, selected }) => {
   return (
-    <button className="p-2 bg-gray-200 rounded" onClick={onSelect}>
+    <button 
+      className={`p-2 rounded ${selected ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
+      onClick={onSelect}
+    >
       🖊️
     </button>
   );
 };
 
-const HandButton: React.FC<{ onSelect: () => void }> = ({ onSelect }) => {
+const HandButton: React.FC<{ onSelect: () => void; selected: boolean }> = ({ onSelect, selected }) => {
   return (
-    <button className="p-2 bg-gray-200 rounded" onClick={onSelect}>
+    <button 
+      className={`p-2 rounded ${selected ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
+      onClick={onSelect}
+    >
       ✋
     </button>
   );
 };
 
-const NodeButton: React.FC<{ onSelect: () => void }> = ({ onSelect }) => {
+const NodeButton: React.FC<{ onSelect: () => void; selected: boolean }> = ({ onSelect, selected }) => {
   return (
-    <button className="p-2 bg-gray-200 rounded" onClick={onSelect}>
+    <button 
+      className={`p-2 rounded ${selected ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
+      onClick={onSelect}
+    >
       📌
     </button>
   );
@@ -38,7 +47,8 @@ interface DrawPath {
 
 const Canvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [mode, setMode] = useState<'panning' | 'drawing' | 'adding_node' | null>(null);
+  // Change the initial state of mode to 'panning'
+  const [mode, setMode] = useState<'panning' | 'drawing' | 'adding_node'>('panning');
   const [isPanning, setIsPanning] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -107,7 +117,7 @@ const Canvas: React.FC = () => {
       setIsPanning(true);
     } else if (mode === 'adding_node' && nodesRef.current) {
       nodesRef.current.addNode(pos.x, pos.y);
-      setMode(null);
+      setMode('panning');
     }
     // Always deselect when clicking on canvas
     if (nodesRef.current) {
@@ -199,9 +209,10 @@ const Canvas: React.FC = () => {
         onNodeSelect={handleNodeSelect}
       />
       <div className="absolute top-4 left-4 flex space-x-2 z-20">
-        <HandButton onSelect={() => setMode('panning')} />
-        <PenButton onSelect={() => setMode('drawing')} />
-        <NodeButton onSelect={() => setMode('adding_node')} />
+        {/* Update the HandButton to show it's selected by default */}
+        <HandButton onSelect={() => setMode('panning')} selected={mode === 'panning'} />
+        <PenButton onSelect={() => setMode('drawing')} selected={mode === 'drawing'} />
+        <NodeButton onSelect={() => setMode('adding_node')} selected={mode === 'adding_node'} />
       </div>
     </div>
   );
