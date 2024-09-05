@@ -7,9 +7,11 @@ interface NodeProps {
   x: number;
   y: number;
   content: string;
+  selected: boolean;
 }
 
-const Node: React.FC<NodeProps & { zoom: number }> = ({ id, x, y, content, zoom }) => {
+const Node: React.FC<NodeProps & { zoom: number; onSelect: (id: string | null) => void }> = 
+  ({ id, x, y, content, zoom, selected, onSelect }) => {
   const style = useMemo(() => ({
     transform: `translate3d(${x}px, ${y}px, 0) scale(${zoom})`,
     transformOrigin: 'top left',
@@ -19,12 +21,20 @@ const Node: React.FC<NodeProps & { zoom: number }> = ({ id, x, y, content, zoom 
     fontSize: '14px',
     minWidth: '100px',
     minHeight: '50px',
-  }), [x, y, zoom]);
+    border: selected ? '2px solid blue' : '1px solid gray',
+    backgroundColor: selected ? 'lightblue' : 'white',
+  }), [x, y, zoom, selected]);
+
+  const handleClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onSelect(selected ? null : id);  // Toggle selection
+  };
 
   return (
     <div
-      className="absolute bg-white border border-gray-300 rounded shadow-md"
+      className="absolute rounded shadow-md"
       style={style}
+      onClick={handleClick}
     >
       {content}
     </div>
@@ -34,13 +44,15 @@ const Node: React.FC<NodeProps & { zoom: number }> = ({ id, x, y, content, zoom 
 interface NodesProps {
   canvasOffset: { x: number; y: number };
   zoom: number;
+  onNodeSelect: (id: string | null) => void;
 }
 
 export interface NodesRef {
   addNode: (x: number, y: number) => void;
+  deselectAll: () => void;
 }
 
-const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom }, ref) => {
+const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom, onNodeSelect }, ref) => {
   const [nodes, setNodes] = useState<NodeProps[]>([]);
 
   const addNode = useCallback((x: number, y: number) => {
@@ -49,13 +61,31 @@ const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom }, ref) => 
       x: x,
       y: y,
       content: 'New Node',
+      selected: false,
     };
     setNodes(prevNodes => [...prevNodes, newNode]);
   }, []);
 
+  const selectNode = useCallback((id: string | null) => {
+    setNodes(prevNodes => prevNodes.map(node => ({
+      ...node,
+      selected: node.id === id
+    })));
+    onNodeSelect(id);
+  }, [onNodeSelect]);
+
+  const deselectAll = useCallback(() => {
+    setNodes(prevNodes => prevNodes.map(node => ({
+      ...node,
+      selected: false
+    })));
+    onNodeSelect(null);
+  }, [onNodeSelect]);
+
   useImperativeHandle(ref, () => ({
-    addNode
-  }), [addNode]);
+    addNode,
+    deselectAll
+  }), [addNode, deselectAll]);
 
   const containerStyle = useMemo(() => ({
     transform: `translate3d(${canvasOffset.x * zoom}px, ${canvasOffset.y * zoom}px, 0)`,
@@ -71,11 +101,11 @@ const Nodes = forwardRef<NodesRef, NodesProps>(({ canvasOffset, zoom }, ref) => 
       {nodes.map((node) => (
         <Node
           key={node.id}
-          id={node.id}
+          {...node}
           x={node.x * zoom}
           y={node.y * zoom}
-          content={node.content}
           zoom={zoom}
+          onSelect={selectNode}
         />
       ))}
     </div>

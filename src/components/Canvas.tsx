@@ -45,6 +45,7 @@ const Canvas: React.FC = () => {
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState<DrawPath | null>(null);
   const nodesRef = useRef<NodesRef>(null);
+  const [selectedNode, setSelectedNode] = useState<string | null>(null);
 
   const getMousePos = (e: React.MouseEvent): Point => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -105,10 +106,17 @@ const Canvas: React.FC = () => {
     } else if (mode === 'panning') {
       setIsPanning(true);
     } else if (mode === 'adding_node' && nodesRef.current) {
-      console.log('Adding node at:', pos.x, pos.y); // Debug log
       nodesRef.current.addNode(pos.x, pos.y);
-      setMode(null); // Reset mode after adding a node
+      setMode(null);
     }
+    // Always deselect when clicking on canvas
+    if (nodesRef.current) {
+      nodesRef.current.deselectAll();
+    }
+  };
+
+  const handleNodeSelect = (id: string | null) => {
+    setSelectedNode(id);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -188,6 +196,7 @@ const Canvas: React.FC = () => {
         ref={nodesRef}
         canvasOffset={offset}
         zoom={zoom}
+        onNodeSelect={handleNodeSelect}
       />
       <div className="absolute top-4 left-4 flex space-x-2 z-20">
         <HandButton onSelect={() => setMode('panning')} />

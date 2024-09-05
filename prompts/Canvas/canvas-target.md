@@ -9,7 +9,7 @@ Category: Canvas
 
 Category: Nodes
 - [ ] Nodes are possible to add to the canvas. ✅ Version: 0.0.5
-- [ ] Nodes are possible to select 
+- [ ] Nodes are possible to select ✅ Version: 0.0.6
 - [ ] Nodes are possible to move 
 - [ ] Nodes are possible to delete
 - [ ] Nodes are possible to edit 
