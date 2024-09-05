@@ -192,6 +192,20 @@ const Canvas: React.FC = () => {
     };
   }, [handleWheel]);
 
+  const handleKeyDown = useCallback((e: KeyboardEvent) => {
+    if (e.key === 'Delete' && selectedNode && nodesRef.current) {
+      nodesRef.current.deleteNode(selectedNode);
+      setSelectedNode(null);
+    }
+  }, [selectedNode]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [handleKeyDown]);
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
       <canvas
