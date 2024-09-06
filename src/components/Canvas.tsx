@@ -56,6 +56,7 @@ const Canvas: React.FC = () => {
   const [currentPath, setCurrentPath] = useState<DrawPath | null>(null);
   const nodesRef = useRef<NodesRef>(null);
   const [selectedNode, setSelectedNode] = useState<string | null>(null);
+  const [isShiftPressed, setIsShiftPressed] = useState(false);
 
   const getMousePos = (e: React.MouseEvent): Point => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -206,6 +207,28 @@ const Canvas: React.FC = () => {
     };
   }, [handleKeyDown]);
 
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(true);
+      }
+    };
+
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.key === 'Shift') {
+        setIsShiftPressed(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
   return (
     <div className="relative w-full h-screen overflow-hidden">
       <canvas
@@ -221,6 +244,7 @@ const Canvas: React.FC = () => {
         canvasOffset={offset}
         zoom={zoom}
         onNodeSelect={handleNodeSelect}
+        isShiftPressed={isShiftPressed}
       />
       <div className="absolute top-4 left-4 flex space-x-2 z-20">
         {/* Update the HandButton to show it's selected by default */}
