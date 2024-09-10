@@ -14,7 +14,7 @@ Category: Nodes
 - [ ] Nodes are possible to move ✅ Version: 0.0.6
 - [ ] Nodes are possible to delete ✅ Version: 0.0.6
 - [ ] Nodes are possible to edit ✅ Version: 0.0.6
-- [ ] Nodes are possible to connect
+- [ ] Nodes are possible to connect ✅ Version: 0.0.7
 - [ ] Nodes are possible to disconnect 
 - [ ] Nodes are possible to duplicate
 - [ ] Nodes are possible to rotate 
