@@ -139,5 +139,3 @@ const Canvas: React.FC = () => {
 };
 
 export default Canvas;
-
-Paning; Drawing;

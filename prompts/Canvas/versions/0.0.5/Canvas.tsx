@@ -3,34 +3,25 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react';
 import Nodes, { NodesRef } from './Nodes';
 
-const PenButton: React.FC<{ onSelect: () => void; selected: boolean }> = ({ onSelect, selected }) => {
+const PenButton: React.FC<{ onSelect: () => void }> = ({ onSelect }) => {
   return (
-    <button 
-      className={`p-2 rounded ${selected ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
-      onClick={onSelect}
-    >
+    <button className="p-2 bg-gray-200 rounded" onClick={onSelect}>
       🖊️
     </button>
   );
 };
 
-const HandButton: React.FC<{ onSelect: () => void; selected: boolean }> = ({ onSelect, selected }) => {
+const HandButton: React.FC<{ onSelect: () => void }> = ({ onSelect }) => {
   return (
-    <button 
-      className={`p-2 rounded ${selected ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
-      onClick={onSelect}
-    >
+    <button className="p-2 bg-gray-200 rounded" onClick={onSelect}>
       ✋
     </button>
   );
 };
 
-const NodeButton: React.FC<{ onSelect: () => void; selected: boolean }> = ({ onSelect, selected }) => {
+const NodeButton: React.FC<{ onSelect: () => void }> = ({ onSelect }) => {
   return (
-    <button 
-      className={`p-2 rounded ${selected ? 'bg-blue-500 text-white' : 'bg-gray-200'}`} 
-      onClick={onSelect}
-    >
+    <button className="p-2 bg-gray-200 rounded" onClick={onSelect}>
       📌
     </button>
   );
@@ -47,16 +38,13 @@ interface DrawPath {
 
 const Canvas: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  // Change the initial state of mode to 'panning'
-  const [mode, setMode] = useState<'panning' | 'drawing' | 'adding_node'>('panning');
+  const [mode, setMode] = useState<'panning' | 'drawing' | 'adding_node' | null>(null);
   const [isPanning, setIsPanning] = useState(false);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const [paths, setPaths] = useState<DrawPath[]>([]);
   const [currentPath, setCurrentPath] = useState<DrawPath | null>(null);
   const nodesRef = useRef<NodesRef>(null);
-  const [selectedNode, setSelectedNode] = useState<string | null>(null);
-  const [isShiftPressed, setIsShiftPressed] = useState(false);
 
   const getMousePos = (e: React.MouseEvent): Point => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -117,17 +105,10 @@ const Canvas: React.FC = () => {
     } else if (mode === 'panning') {
       setIsPanning(true);
     } else if (mode === 'adding_node' && nodesRef.current) {
+      console.log('Adding node at:', pos.x, pos.y); // Debug log
       nodesRef.current.addNode(pos.x, pos.y);
-      setMode('panning');
+      setMode(null); // Reset mode after adding a node
     }
-    // Always deselect when clicking on canvas
-    if (nodesRef.current) {
-      nodesRef.current.deselectAll();
-    }
-  };
-
-  const handleNodeSelect = (id: string | null) => {
-    setSelectedNode(id);
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
@@ -193,42 +174,6 @@ const Canvas: React.FC = () => {
     };
   }, [handleWheel]);
 
-  const handleKeyDown = useCallback((e: KeyboardEvent) => {
-    if (e.key === 'Delete' && selectedNode && nodesRef.current) {
-      nodesRef.current.deleteNode(selectedNode);
-      setSelectedNode(null);
-    }
-  }, [selectedNode]);
-
-  useEffect(() => {
-    window.addEventListener('keydown', handleKeyDown);
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleKeyDown]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
-        setIsShiftPressed(true);
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.key === 'Shift') {
-        setIsShiftPressed(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
-  }, []);
-
   return (
     <div className="relative w-full h-screen overflow-hidden">
       <canvas
@@ -243,14 +188,11 @@ const Canvas: React.FC = () => {
         ref={nodesRef}
         canvasOffset={offset}
         zoom={zoom}
-        onNodeSelect={handleNodeSelect}
-        isShiftPressed={isShiftPressed}
       />
       <div className="absolute top-4 left-4 flex space-x-2 z-20">
-        {/* Update the HandButton to show it's selected by default */}
-        <HandButton onSelect={() => setMode('panning')} selected={mode === 'panning'} />
-        <PenButton onSelect={() => setMode('drawing')} selected={mode === 'drawing'} />
-        <NodeButton onSelect={() => setMode('adding_node')} selected={mode === 'adding_node'} />
+        <HandButton onSelect={() => setMode('panning')} />
+        <PenButton onSelect={() => setMode('drawing')} />
+        <NodeButton onSelect={() => setMode('adding_node')} />
       </div>
     </div>
   );
